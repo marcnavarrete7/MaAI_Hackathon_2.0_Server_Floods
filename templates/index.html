@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flood NBS Platform</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background-color: #000;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+    #globe-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #globeViz {
+      width: 100vw;
+      height: 100vh;
+    }
+    #searchBox {
+      position: absolute;
+      bottom: 60px;
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #searchInput {
+      padding: 14px 24px;
+      font-size: 18px;
+      width: 100%;
+      border-radius: 25px;
+      border: none;
+      outline: none;
+      background: #f2f2f2;
+      text-align: center;
+    }
+    #suggestions {
+      margin-top: 5px;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      max-height: 200px;
+      overflow-y: auto;
+      border-radius: 0 0 10px 10px;
+      z-index: 100;
+    }
+    #suggestions div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background-color: #f0f0f0;
+    }
+    #actionButton {
+      margin-top: 15px;
+      padding: 12px 28px;
+      border-radius: 20px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #actionButton:hover {
+      background-color: #45a049;
+    }
+  </style>
+  <script src="https://unpkg.com/globe.gl"></script>
+</head>
+<body>
+  <div id="globe-container">
+    <div id="globeViz"></div>
+    <div id="searchBox">
+      <input type="text" id="searchInput" placeholder="Search Your Location">
+      <div id="suggestions"></div>
+      <button id="actionButton" style="display: none;">Run Analysis</button>
+    </div>
+  </div>
+
+  <script>
+    const Globe = window.Globe;
+    const world = Globe()(document.getElementById('globeViz'))
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .pointOfView({ lat: 0, lng: 0, altitude: 2 });
+
+    const searchInput = document.getElementById("searchInput");
+    const suggestionsBox = document.getElementById("suggestions");
+    const actionButton = document.getElementById("actionButton");
+
+    let selectedLocation = null;
+
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value;
+      if (query.length < 2) {
+        suggestionsBox.innerHTML = "";
+        return;
+      }
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&accept-language=en&q=${query}`)
+        .then(res => res.json())
+        .then(data => {
+          suggestionsBox.innerHTML = "";
+          if (!data || data.length === 0) return;
+          data.slice(0, 5).forEach(item => {
+            const div = document.createElement("div");
+            div.textContent = item.display_name;
+            div.onclick = () => {
+              searchInput.value = item.display_name;
+              suggestionsBox.innerHTML = "";
+              const lat = parseFloat(item.lat);
+              const lng = parseFloat(item.lon);
+              world.pointOfView({ lat, lng, altitude: 1.5 }, 2000);
+              world.pointsData([{ lat, lng, size: 1, color: 'red' }])
+                .pointAltitude(0.01)
+                .pointColor('color')
+                .pointRadius('size');
+              selectedLocation = { name: item.display_name, lat, lng };
+              actionButton.style.display = 'block';
+            }
+            suggestionsBox.appendChild(div);
+          });
+        })
+        .catch(err => {
+          console.error("Autocomplete error:", err);
+          suggestionsBox.innerHTML = "";
+        });
+    });
+
+    actionButton.onclick = () => {
+      alert(`Running analysis for ${selectedLocation.name}`);
+    };
+  </script>
+</body>
+</html>
