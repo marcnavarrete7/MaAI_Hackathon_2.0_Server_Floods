@@ -7,15 +7,17 @@
     * {
       box-sizing: border-box;
     }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       width: 100%;
-      background-color: #000;
+      background-color: #405e42;
       font-family: 'Arial', sans-serif;
       overflow: hidden;
     }
+
     #globe-container {
       position: absolute;
       top: 0;
@@ -27,18 +29,59 @@
       align-items: center;
       justify-content: center;
     }
+
     #globeViz {
       width: 100vw;
       height: 100vh;
+      z-index: 0;
     }
+
+    #usernameBox {
+      position: absolute;
+      top: 45%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 3;
+    }
+
+    #usernameInput {
+      padding: 14px 24px;
+      font-size: 18px;
+      width: 250px;
+      border-radius: 25px;
+      border: none;
+      outline: none;
+      background: #f2f2f2;
+      text-align: center;
+    }
+
+    #enterButton {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     #searchBox {
       position: absolute;
       bottom: 60px;
       width: 420px;
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
+      z-index: 2;
     }
+
     #searchInput {
       padding: 14px 24px;
       font-size: 18px;
@@ -49,6 +92,7 @@
       background: #f2f2f2;
       text-align: center;
     }
+
     #suggestions {
       margin-top: 5px;
       width: 100%;
@@ -58,16 +102,19 @@
       max-height: 200px;
       overflow-y: auto;
       border-radius: 0 0 10px 10px;
-      z-index: 100;
+      z-index: 3;
     }
+
     #suggestions div {
       padding: 10px;
       cursor: pointer;
     }
+
     #suggestions div:hover {
       background-color: #f0f0f0;
     }
-    #actionButton {
+
+    #continueButton {
       margin-top: 15px;
       padding: 12px 28px;
       border-radius: 20px;
@@ -76,8 +123,10 @@
       color: white;
       font-size: 16px;
       cursor: pointer;
+      display: none;
     }
-    #actionButton:hover {
+
+    #continueButton:hover {
       background-color: #45a049;
     }
   </style>
@@ -86,10 +135,14 @@
 <body>
   <div id="globe-container">
     <div id="globeViz"></div>
+    <div id="usernameBox">
+      <input type="text" id="usernameInput" placeholder="Enter your name">
+      <button id="enterButton">✔</button>
+    </div>
     <div id="searchBox">
       <input type="text" id="searchInput" placeholder="Search Your Location">
       <div id="suggestions"></div>
-      <button id="actionButton" style="display: none;">Run Analysis</button>
+      <button id="continueButton">Continue</button>
     </div>
   </div>
 
@@ -100,11 +153,25 @@
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .pointOfView({ lat: 0, lng: 0, altitude: 2 });
 
+    const usernameInput = document.getElementById("usernameInput");
+    const enterButton = document.getElementById("enterButton");
+    const searchBox = document.getElementById("searchBox");
     const searchInput = document.getElementById("searchInput");
     const suggestionsBox = document.getElementById("suggestions");
-    const actionButton = document.getElementById("actionButton");
+    const continueButton = document.getElementById("continueButton");
 
     let selectedLocation = null;
+
+    enterButton.onclick = () => {
+      const username = usernameInput.value.trim();
+      if (username.length > 0) {
+        localStorage.setItem("username", username);
+        searchBox.style.display = "flex";
+        document.getElementById("usernameBox").style.display = "none";
+      } else {
+        alert("Please enter your name.");
+      }
+    };
 
     searchInput.addEventListener("input", () => {
       const query = searchInput.value;
@@ -131,7 +198,7 @@
                 .pointColor('color')
                 .pointRadius('size');
               selectedLocation = { name: item.display_name, lat, lng };
-              actionButton.style.display = 'block';
+              continueButton.style.display = 'block';
             }
             suggestionsBox.appendChild(div);
           });
@@ -142,8 +209,15 @@
         });
     });
 
-    actionButton.onclick = () => {
-      alert(`Running analysis for ${selectedLocation.name}`);
+    continueButton.onclick = () => {
+      const username = localStorage.getItem("username") || "anonymous";
+      const urlParams = new URLSearchParams({
+        username: username,
+        name: selectedLocation.name,
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng
+      });
+      window.location.href = "/upload?" + urlParams.toString();
     };
   </script>
 </body>
